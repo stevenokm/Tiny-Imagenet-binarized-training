@@ -147,10 +147,6 @@ def train(epoch):
     total = 0
     for batch_idx, data in enumerate(train_loader):
         (inputs, targets) = data
-        '''if args.sess == 'cnv_1w1a' or args.sess == 'cnv_1w1a_wsconv':
-            (inputs, targets) = data
-        else:
-            (inputs, _, targets, _, _) = data'''
 
         # Baseline Implementation
         inputs, targets = Variable(inputs), Variable(targets)
@@ -158,51 +154,7 @@ def train(epoch):
 
         optimizer.zero_grad()
         loss = criterion(outputs, targets)
-
-        '''if __debug__:
-            print("#")
-            print("# before")
-            with torch.no_grad():
-                for layer in net.modules():
-                    if isinstance(layer, qnn.QuantConv2d) or isinstance(
-                            layer, qnn.QuantLinear):
-                        layer_mean = torch.mean(layer.weight)
-                        layer_quant_mean = torch.mean(layer.quant_weight())
-                        print(
-                            layer.__module__, layer_mean, layer_quant_mean,
-                            torch.abs(layer_mean) -
-                            torch.abs(layer_quant_mean))
-'''
         p_loss = 0.0
-        # if wsconv:
-        #     all_p_params = torch.zeros(1, device=device)
-        #     with torch.no_grad():
-        #         for layer in net.modules():
-        #             if isinstance(layer, qnn.QuantConv2d) or isinstance(
-        #                     layer, qnn.QuantLinear):
-        #                 layer_std, layer_mean = torch.std_mean(layer.weight)
-        #                 layer.weight -= layer_mean
-        #                 layer.weight /= layer_std
-        #                 layer.weight *= torch.numel(layer.weight)**-.5
-        #             elif isinstance(layer, NegBiasLayer):
-        #                 all_p_params = torch.cat(
-        #                     (all_p_params, layer.bias.data))
-        #     p_loss = args.p_factor * torch.norm(all_p_params, 1)
-        #     loss += p_loss
-
-        '''if __debug__:
-            print("# after")
-            with torch.no_grad():
-                for layer in net.modules():
-                    if isinstance(layer, qnn.QuantConv2d) or isinstance(
-                            layer, qnn.QuantLinear):
-                        layer_mean = torch.mean(layer.weight)
-                        layer_quant_mean = torch.mean(layer.quant_weight())
-                        print(
-                            layer.__module__, layer_mean, layer_quant_mean,
-                            torch.abs(layer_mean) -
-                            torch.abs(layer_quant_mean))'''
-
         loss.backward()
         optimizer.step()
 
@@ -211,12 +163,6 @@ def train(epoch):
         total += targets.size(0)
         correct += predicted.eq(targets.data).cpu().sum()
         correct = correct.item()
-
-        # progress_bar(
-        #     batch_idx, len(trainloader),
-        #     'Loss: %.3f | P loss: %.3f | Acc: %.3f%% (%d/%d)' %
-        #     (train_loss /
-        #      (batch_idx + 1), p_loss, 100. * correct / total, correct, total))
         print('Loss: %.3f | Acc: %.3f%% (%d/%d)' %(train_loss /
              (batch_idx + 1), 100. * correct / total, correct, total))
 
