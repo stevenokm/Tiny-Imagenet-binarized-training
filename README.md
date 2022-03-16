@@ -13,7 +13,7 @@ run
 ```bash
 python trans.py
 ```
-Which will rearrange the dict of the Tiny imagenet dataset and make it follow the readnig requirement for the prtorch.
+Which will rearrange the dict of the Tiny imagenet dataset and make it follow the reading requirement for the prtorch.
 
 After that run
 
