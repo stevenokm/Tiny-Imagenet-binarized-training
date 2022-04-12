@@ -40,6 +40,8 @@ from brevitas_examples.bnn_pynq.models.common import CommonWeightQuant, CommonAc
 
 from utils import progress_bar
 
+from losses import SqrHingeLoss
+
 parser = argparse.ArgumentParser(
     description='PyTorch Complement Objective Training (COT)')
 parser.add_argument('--resume',
@@ -57,11 +59,11 @@ parser.add_argument('--mem_fault',
                     help='mem fault pattern')
 parser.add_argument('--seed', default=11111, type=int, help='rng seed')
 parser.add_argument('--decay',
-                    default=1e-4,
+                    default=0,
                     type=float,
                     help='weight decay (default=1e-4)')
 parser.add_argument('--lr',
-                    default=0.1,
+                    default=0.02,
                     type=float,
                     help='initial learning rate')
 parser.add_argument('--batch-size',
@@ -134,28 +136,65 @@ batch_size = args.batch_size
 test_batch_size = 100
 base_learning_rate = args.lr
 
-#### dataset import ####
-data_dir = './tiny-imagenet-200'
-num_label = 200
-normalize = transforms.Normalize((0.4802, 0.4481, 0.3975),
-                                 (0.2770, 0.2691, 0.2821))
-#transform_train = transforms.Compose([transforms.RandomResizedCrop(32), transforms.RandomHorizontalFlip(), transforms.ToTensor(),        normalize, ])
-#transform_test = transforms.Compose([transforms.Resize(32), transforms.ToTensor(), normalize, ])
+if use_cuda:
+    n_gpu = torch.cuda.device_count()
+    batch_size *= n_gpu
+    base_learning_rate *= n_gpu
+
+# #### dataset import ####
+# data_dir = './tiny-imagenet-200'
+# num_label = 200
+# normalize = transforms.Normalize((0.4802, 0.4481, 0.3975),
+#                                  (0.2770, 0.2691, 0.2821))
+# #transform_train = transforms.Compose([transforms.RandomResizedCrop(32), transforms.RandomHorizontalFlip(), transforms.ToTensor(),        normalize, ])
+# #transform_test = transforms.Compose([transforms.Resize(32), transforms.ToTensor(), normalize, ])
+# transform_train = transforms.Compose([
+#     transforms.RandomHorizontalFlip(),
+#     transforms.ToTensor(),
+#     normalize,
+# ])
+# transform_test = transforms.Compose([
+#     transforms.ToTensor(),
+#     normalize,
+# ])
+# trainset = datasets.ImageFolder(root=os.path.join(data_dir, 'train'),
+#                                 transform=transform_train)
+# testset = datasets.ImageFolder(root=os.path.join(data_dir, 'val'),
+#                                transform=transform_test)
+# #trainset = datasets.ImageFolder(root=os.path.join(data_dir, 'train'))
+# #testset = datasets.ImageFolder(root=os.path.join(data_dir, 'val'))
+# train_loader = torch.utils.data.DataLoader(trainset,
+#                                            batch_size=batch_size,
+#                                            shuffle=True,
+#                                            pin_memory=True)
+# test_loader = torch.utils.data.DataLoader(testset,
+#                                           batch_size=test_batch_size,
+#                                           shuffle=False,
+#                                           pin_memory=True)
+
+#### dataset import (CIFAR-10 ####
+data_dir = './cifar'
+num_label = 10
+# normalize = transforms.Normalize((0.4914, 0.4822, 0.4465),
+#                                  (0.247, 0.243, 0.261))
 transform_train = transforms.Compose([
+    transforms.RandomCrop(32, padding=4),
     transforms.RandomHorizontalFlip(),
     transforms.ToTensor(),
-    normalize,
+    # normalize,
 ])
 transform_test = transforms.Compose([
     transforms.ToTensor(),
-    normalize,
+    # normalize,
 ])
-trainset = datasets.ImageFolder(root=os.path.join(data_dir, 'train'),
-                                transform=transform_train)
-testset = datasets.ImageFolder(root=os.path.join(data_dir, 'val'),
-                               transform=transform_test)
-#trainset = datasets.ImageFolder(root=os.path.join(data_dir, 'train'))
-#testset = datasets.ImageFolder(root=os.path.join(data_dir, 'val'))
+trainset = datasets.CIFAR10(root=os.path.join(data_dir),
+                            train=True,
+                            transform=transform_train,
+                            download=True)
+testset = datasets.CIFAR10(root=os.path.join(data_dir),
+                           train=False,
+                           transform=transform_test,
+                           download=True)
 train_loader = torch.utils.data.DataLoader(trainset,
                                            batch_size=batch_size,
                                            shuffle=True,
@@ -166,10 +205,11 @@ test_loader = torch.utils.data.DataLoader(testset,
                                           pin_memory=True)
 
 #### CNV declaration ####
-CNV_OUT_CH_POOL = [(4, False), (4, True), (8, False), (8, True), (16, False),
-                   (16, False)]
-INTERMEDIATE_FC_FEATURES = [(1296, 750), (750, 500)]
-LAST_FC_IN_FEATURES = 500
+# VGG-13 like 9 layers CNN
+CNV_OUT_CH_POOL = [(64, False), (64, True), (128, False), (128, True),
+                   (256, False), (256, False)]
+INTERMEDIATE_FC_FEATURES = [(16384, 4096), (4096, 1024)]
+LAST_FC_IN_FEATURES = INTERMEDIATE_FC_FEATURES[1][1]
 LAST_FC_PER_OUT_CH_SCALING = False
 POOL_SIZE = 2
 KERNEL_SIZE = 3
@@ -204,6 +244,7 @@ class CNV(Module):
                             in_channels=in_ch,
                             out_channels=out_ch,
                             bias=False,
+                            padding=1,
                             weight_quant=CommonWeightQuant,
                             weight_bit_width=weight_bit_width))
             in_ch = out_ch
@@ -250,14 +291,18 @@ class CNV(Module):
         x = 2.0 * x - torch.tensor([1.0], device=x.device)
         for mod in self.conv_features:
             x = mod(x)
+            if __debug__:
+                print(x.shape)
         x = x.view(x.shape[0], -1)
+        if __debug__:
+            print(x.shape)
         for mod in self.linear_features:
             x = mod(x)
         return x
 
 
 def cnv():
-    net = CNV()
+    net = CNV(num_classes=num_label)
     return net
 
 
@@ -272,7 +317,7 @@ brevitas_op_count_hooks = {
     QuantIdentity: thop_basic_hooks.zero_ops,
     QuantLinear: thop_basic_hooks.count_linear
 }
-input_size = (1, 3, 64, 64)
+input_size = (1, 3, 32, 32)
 inputs = torch.rand(size=input_size, device=device)
 thop_model = copy.deepcopy(net)
 summary(thop_model, input_size=input_size)
@@ -307,10 +352,15 @@ if args.resume:
     torch.set_rng_state(checkpoint['rng_state'])
 
 criterion = nn.CrossEntropyLoss()
-optimizer = optim.SGD(net.parameters(),
-                      lr=base_learning_rate,
-                      momentum=0.9,
-                      weight_decay=args.decay)
+# criterion = SqrHingeLoss()
+# optimizer = optim.SGD(net.parameters(),
+#                       lr=base_learning_rate,
+#                       momentum=0.9,
+#                       weight_decay=args.decay)
+optimizer = optim.Adam(net.parameters(),
+                       lr=base_learning_rate,
+                       betas=(0.9, 0.999),
+                       weight_decay=args.decay)
 
 
 def train(epoch):
@@ -326,12 +376,25 @@ def train(epoch):
             inputs = inputs.to(device, non_blocking=True)
             targets = targets.to(device, non_blocking=True)
 
+        # for hingeloss only
+        if isinstance(criterion, SqrHingeLoss):
+            targets = targets.unsqueeze(1)
+            target_onehot = torch.Tensor(targets.size(0),
+                                         num_label).to(device,
+                                                       non_blocking=True)
+            target_onehot.fill_(-1)
+            target_onehot.scatter_(1, targets, 1)
+            targets = targets.squeeze()
+            target_var = target_onehot
+        else:
+            target_var = targets
+
         # Baseline Implementation
-        inputs, targets = Variable(inputs), Variable(targets)
+        inputs, target_var = Variable(inputs), Variable(target_var)
         outputs = net(inputs)
 
         optimizer.zero_grad()
-        loss = criterion(outputs, targets)
+        loss = criterion(outputs, target_var)
         p_loss = 0.0
         loss.backward()
         optimizer.step()
@@ -434,16 +497,16 @@ def adjust_learning_rate(optimizer, epoch):
     """decrease the learning rate at 100 and 150 epoch"""
 
     lr = base_learning_rate
-    if epoch >= 10:
-        lr /= 10
-    if epoch >= 30:
-        lr /= 10
-    if epoch >= 50:
-        lr /= 10
-    if epoch >= 60:
-        lr /= 10
+    if epoch >= 40:
+        lr = 1e-3
     if epoch >= 80:
-        lr /= 10
+        lr = 5e-4
+    if epoch >= 100:
+        lr = 1e-4
+    if epoch >= 120:
+        lr = 5e-5
+    if epoch >= 140:
+        lr = 1e-5
     for param_group in optimizer.param_groups:
         param_group['lr'] = lr
 
