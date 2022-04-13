@@ -36,6 +36,7 @@ import brevitas.nn as qnn
 from brevitas.nn import QuantConv2d, QuantIdentity, QuantLinear
 from brevitas.core.restrict_val import RestrictValueType
 from brevitas_examples.bnn_pynq.models.common import CommonWeightQuant, CommonActQuant
+from brevitas_examples.bnn_pynq.models.tensor_norm import TensorNorm
 
 from utils import progress_bar
 
@@ -129,7 +130,7 @@ use_cuda = torch.cuda.is_available()
 device = 'cuda' if use_cuda else 'cpu'
 best_acc = 0  # best test accuracy
 batch_size = args.batch_size
-test_batch_size = 128
+test_batch_size = args.batch_size
 base_learning_rate = args.lr
 
 if use_cuda:
@@ -140,8 +141,7 @@ if use_cuda:
 #### dataset import ####
 data_dir = '../tiny-imagenet-200'
 num_label = 200
-normalize = transforms.Normalize((0.485, 0.456, 0.406),
-                                 (0.229, 0.224, 0.225))
+normalize = transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
 transform_train = transforms.Compose([
     transforms.RandomCrop(64, padding=4),
     transforms.RandomHorizontalFlip(),
@@ -152,15 +152,19 @@ transform_test = transforms.Compose([
     transforms.ToTensor(),
     # normalize,
 ])
-trainset = datasets.ImageFolder(root=os.path.join(data_dir, 'train'),
-                                transform=transform_train)
+trainset_once = datasets.ImageFolder(root=os.path.join(data_dir, 'train'),
+                                     transform=transform_train)
+trainset = trainset_once
+for i in range(args.duplicate - 1):
+    trainset = torch.utils.data.ConcatDataset([trainset, trainset_once])
 testset = datasets.ImageFolder(root=os.path.join(data_dir, 'val'),
                                transform=transform_test)
 train_loader = torch.utils.data.DataLoader(trainset,
                                            batch_size=batch_size,
                                            shuffle=True,
                                            pin_memory=True,
-                                           num_workers=args.workers)
+                                           num_workers=args.workers,
+                                           prefetch_factor=args.duplicate * 2)
 test_loader = torch.utils.data.DataLoader(testset,
                                           batch_size=test_batch_size,
                                           shuffle=False,
@@ -203,11 +207,9 @@ test_loader = torch.utils.data.DataLoader(testset,
 
 #### CNV declaration ####
 # VGG-13 like 13 layers CNN
-CNV_OUT_CH_POOL = [(64, False), (64, False), (64, True), (128, False),
-                   (128, False), (128, True), (256, False), (256, False),
-                   (256, True), (512, False), (512, False), (512, True),
-                   (512, False), (512, False), (512, True)]
-INTERMEDIATE_FC_FEATURES = [(2048, 2048), (2048, 1024)]
+CNV_OUT_CH_POOL = [(4, False), (4, True), (8, False), (8, True), (16, False),
+                   (16, False)]
+INTERMEDIATE_FC_FEATURES = [(1296, 750), (750, 500)]
 LAST_FC_IN_FEATURES = INTERMEDIATE_FC_FEATURES[-1][1]
 LAST_FC_PER_OUT_CH_SCALING = False
 POOL_SIZE = 2
@@ -243,7 +245,6 @@ class CNV(Module):
                             in_channels=in_ch,
                             out_channels=out_ch,
                             bias=False,
-                            padding=1,
                             weight_quant=CommonWeightQuant,
                             weight_bit_width=weight_bit_width))
             in_ch = out_ch
@@ -272,7 +273,7 @@ class CNV(Module):
                         bias=False,
                         weight_quant=CommonWeightQuant,
                         weight_bit_width=weight_bit_width))
-        self.linear_features.append(BatchNorm1d(num_classes, eps=1e-4))
+        self.linear_features.append(TensorNorm())
 
         for m in self.modules():
             if isinstance(m, QuantConv2d) or isinstance(m, QuantLinear):
@@ -357,10 +358,10 @@ optimizer = optim.SGD(net.parameters(),
                       weight_decay=args.decay)
 if args.optimizer == 'Adam':
     optimizer = optim.Adam(net.parameters(),
-                        lr=base_learning_rate,
-                        betas=(0.9, 0.999),
-                        weight_decay=args.decay,
-                        amsgrad=True)
+                           lr=base_learning_rate,
+                           betas=(0.9, 0.999),
+                           weight_decay=args.decay,
+                           amsgrad=True)
 
 
 def train(epoch):
@@ -378,7 +379,7 @@ def train(epoch):
 
         # Baseline Implementation
         inputs, targets = Variable(inputs), Variable(targets)
-        optimizer.zero_grad()
+        optimizer.zero_grad(set_to_none=True)
         outputs = net(inputs)
         loss = criterion(outputs, targets)
         p_loss = 0.0
@@ -451,7 +452,7 @@ def test(epoch):
     if acc > best_acc:
         best_acc = acc
         if args.train:
-            checkpoint(acc, epoch)
+            checkpoint(acc, epoch + args.duplicate - 1)
     return (test_loss / batch_idx, 100. * correct / total)
 
 
@@ -482,25 +483,31 @@ def checkpoint(acc, epoch):
 
 def adjust_learning_rate(optimizer, epoch):
     """decrease the learning rate at 100 and 150 epoch"""
-
     lr = base_learning_rate
-    if epoch >= 40:
-        lr = 1e-3
-    if epoch >= 80:
-        lr = 5e-4
-    if epoch >= 100:
-        lr = 1e-4
-    if epoch >= 120:
-        lr = 5e-5
-    if epoch >= 140:
-        lr = 1e-5
+    if args.optimizer == 'SGD':
+        if epoch >= 40:
+            lr = 1e-3
+        if epoch >= 80:
+            lr = 5e-4
+        if epoch >= 100:
+            lr = 1e-4
+        if epoch >= 120:
+            lr = 5e-5
+        if epoch >= 140:
+            lr = 1e-5
+    elif args.optimizer == 'Adam':
+        if epoch >= 80:
+            lr = 1e-2
+        if epoch >= 160:
+            lr = 5e-4
+        if epoch >= 240:
+            lr = 1e-5
     for param_group in optimizer.param_groups:
         param_group['lr'] = lr
 
 
-for epoch in range(start_epoch, args.epochs):
-    if args.optimizer == 'SGD':
-        adjust_learning_rate(optimizer, epoch)
+for epoch in range(start_epoch, args.epochs, args.duplicate):
+    adjust_learning_rate(optimizer, epoch)
     if args.train:
         train_loss, train_acc = train(epoch)
     test_loss, test_acc = test(epoch)

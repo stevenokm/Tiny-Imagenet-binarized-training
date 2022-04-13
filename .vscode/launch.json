@@ -12,7 +12,9 @@
             "console": "integratedTerminal",
             "justMyCode": true,
             "args": [
-                "--train"
+                "--train",
+                "--epochs",
+                "1"
             ]
         }
     ]
