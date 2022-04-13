@@ -130,7 +130,7 @@ use_cuda = torch.cuda.is_available()
 device = 'cuda' if use_cuda else 'cpu'
 best_acc = 0  # best test accuracy
 batch_size = args.batch_size
-test_batch_size = 100
+test_batch_size = 128
 base_learning_rate = args.lr
 
 if use_cuda:
@@ -141,24 +141,22 @@ if use_cuda:
 #### dataset import ####
 data_dir = '../tiny-imagenet-200'
 num_label = 200
-normalize = transforms.Normalize((0.4802, 0.4481, 0.3975),
-                                 (0.2770, 0.2691, 0.2821))
+normalize = transforms.Normalize((0.485, 0.456, 0.406),
+                                 (0.229, 0.224, 0.225))
 transform_train = transforms.Compose([
     transforms.RandomCrop(64, padding=4),
     transforms.RandomHorizontalFlip(),
     transforms.ToTensor(),
-    normalize,
+    # normalize,
 ])
 transform_test = transforms.Compose([
     transforms.ToTensor(),
-    normalize,
+    # normalize,
 ])
 trainset = datasets.ImageFolder(root=os.path.join(data_dir, 'train'),
                                 transform=transform_train)
 testset = datasets.ImageFolder(root=os.path.join(data_dir, 'val'),
                                transform=transform_test)
-#trainset = datasets.ImageFolder(root=os.path.join(data_dir, 'train'))
-#testset = datasets.ImageFolder(root=os.path.join(data_dir, 'val'))
 train_loader = torch.utils.data.DataLoader(trainset,
                                            batch_size=batch_size,
                                            shuffle=True,
@@ -362,7 +360,8 @@ if args.optimizer == 'Adam':
     optimizer = optim.Adam(net.parameters(),
                         lr=base_learning_rate,
                         betas=(0.9, 0.999),
-                        weight_decay=args.decay)
+                        weight_decay=args.decay,
+                        amsgrad=True)
 
 
 def train(epoch):
@@ -380,9 +379,8 @@ def train(epoch):
 
         # Baseline Implementation
         inputs, targets = Variable(inputs), Variable(targets)
-        outputs = net(inputs)
-
         optimizer.zero_grad()
+        outputs = net(inputs)
         loss = criterion(outputs, targets)
         p_loss = 0.0
         loss.backward()
@@ -413,14 +411,14 @@ def test(epoch):
 
     with torch.no_grad():
 
-        print("#")
-        for layer in test_model.modules():
-            if isinstance(layer, qnn.QuantConv2d) or isinstance(
-                    layer, qnn.QuantLinear):
-                layer_mean = torch.abs(torch.mean(layer.weight))
-                layer_quant_mean = torch.abs(torch.mean(layer.quant_weight()))
-                print(layer.__module__, layer_mean, layer_quant_mean,
-                      layer_mean - layer_quant_mean)
+        # print("#")
+        # for layer in test_model.modules():
+        #     if isinstance(layer, qnn.QuantConv2d) or isinstance(
+        #             layer, qnn.QuantLinear):
+        #         layer_mean = torch.abs(torch.mean(layer.weight))
+        #         layer_quant_mean = torch.abs(torch.mean(layer.quant_weight()))
+        #         print(layer.__module__, layer_mean, layer_quant_mean,
+        #               layer_mean - layer_quant_mean)
 
         for batch_idx, data in enumerate(test_loader):
             (inputs, targets) = data
@@ -453,7 +451,8 @@ def test(epoch):
     acc = 100. * correct / total
     if acc > best_acc:
         best_acc = acc
-        checkpoint(acc, epoch)
+        if args.train:
+            checkpoint(acc, epoch)
     return (test_loss / batch_idx, 100. * correct / total)
 
 
@@ -487,21 +486,20 @@ def adjust_learning_rate(optimizer, epoch):
 
     lr = base_learning_rate
     if epoch >= 60:
-        lr = 1e-2
-    if epoch >= 80:
-        lr = 5e-3
+        lr = 5e-4
     if epoch >= 120:
-        lr = 1e-3
-    if epoch >= 160:
         lr = 1e-4
-    if epoch >= 200:
+    if epoch >= 180:
+        lr = 5e-5
+    if epoch >= 240:
         lr = 1e-5
     for param_group in optimizer.param_groups:
         param_group['lr'] = lr
 
 
 for epoch in range(start_epoch, args.epochs):
-    # adjust_learning_rate(optimizer, epoch)
+    if args.optimizer == 'SGD':
+        adjust_learning_rate(optimizer, epoch)
     if args.train:
         train_loss, train_acc = train(epoch)
     test_loss, test_acc = test(epoch)
