@@ -35,7 +35,6 @@ import brevitas.onnx as bo
 import brevitas.nn as qnn
 from brevitas.nn import QuantConv2d, QuantIdentity, QuantLinear
 from brevitas.core.restrict_val import RestrictValueType
-from brevitas_examples.bnn_pynq.models.tensor_norm import TensorNorm
 from brevitas_examples.bnn_pynq.models.common import CommonWeightQuant, CommonActQuant
 
 from utils import progress_bar
@@ -273,7 +272,7 @@ class CNV(Module):
                         bias=False,
                         weight_quant=CommonWeightQuant,
                         weight_bit_width=weight_bit_width))
-        self.linear_features.append(TensorNorm())
+        self.linear_features.append(BatchNorm1d(num_classes, eps=1e-4))
 
         for m in self.modules():
             if isinstance(m, QuantConv2d) or isinstance(m, QuantLinear):
@@ -411,14 +410,14 @@ def test(epoch):
 
     with torch.no_grad():
 
-        # print("#")
-        # for layer in test_model.modules():
-        #     if isinstance(layer, qnn.QuantConv2d) or isinstance(
-        #             layer, qnn.QuantLinear):
-        #         layer_mean = torch.abs(torch.mean(layer.weight))
-        #         layer_quant_mean = torch.abs(torch.mean(layer.quant_weight()))
-        #         print(layer.__module__, layer_mean, layer_quant_mean,
-        #               layer_mean - layer_quant_mean)
+        print("#")
+        for layer in test_model.modules():
+            if isinstance(layer, qnn.QuantConv2d) or isinstance(
+                    layer, qnn.QuantLinear):
+                layer_mean = torch.abs(torch.mean(layer.weight))
+                layer_quant_mean = torch.abs(torch.mean(layer.quant_weight()))
+                print(layer.__module__, layer_mean, layer_quant_mean,
+                      layer_mean - layer_quant_mean)
 
         for batch_idx, data in enumerate(test_loader):
             (inputs, targets) = data
@@ -485,13 +484,15 @@ def adjust_learning_rate(optimizer, epoch):
     """decrease the learning rate at 100 and 150 epoch"""
 
     lr = base_learning_rate
-    if epoch >= 60:
+    if epoch >= 40:
+        lr = 1e-3
+    if epoch >= 80:
         lr = 5e-4
-    if epoch >= 120:
+    if epoch >= 100:
         lr = 1e-4
-    if epoch >= 180:
+    if epoch >= 120:
         lr = 5e-5
-    if epoch >= 240:
+    if epoch >= 140:
         lr = 1e-5
     for param_group in optimizer.param_groups:
         param_group['lr'] = lr
