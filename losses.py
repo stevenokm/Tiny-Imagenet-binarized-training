@@ -6,7 +6,7 @@ from torch.autograd import Function
 class squared_hinge_loss(Function):
     @staticmethod
     def forward(ctx, predictions, targets):
-        ctx.save_for_backward(predictions, targets) 
+        ctx.save_for_backward(predictions, targets)
         output = 1.-predictions.mul(targets)
         output[output.le(0.)] = 0.
         loss = torch.mean(output.mul(output))
