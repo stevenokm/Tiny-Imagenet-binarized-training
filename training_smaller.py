@@ -207,9 +207,9 @@ test_loader = torch.utils.data.DataLoader(testset,
 
 #### CNV declaration ####
 # VGG-13 like 13 layers CNN
-CNV_OUT_CH_POOL = [(4, False), (4, True), (8, False), (8, True), (16, False),
-                   (16, False)]
-INTERMEDIATE_FC_FEATURES = [(1296, 750), (750, 500)]
+CNV_OUT_CH_POOL = [(16, False), (16, True), (32, False), (32, True),
+                   (64, False), (64, True)]
+INTERMEDIATE_FC_FEATURES = [(1024, 1024), (1024, 512)]
 LAST_FC_IN_FEATURES = INTERMEDIATE_FC_FEATURES[-1][1]
 LAST_FC_PER_OUT_CH_SCALING = False
 POOL_SIZE = 2
@@ -401,6 +401,7 @@ def train(epoch):
 
 
 def test(epoch):
+    print('\nEpoch: %d' % epoch)
     global best_acc
     net.eval()
     test_loss = 0
@@ -501,13 +502,21 @@ def adjust_learning_rate(optimizer, epoch):
         if epoch >= 160:
             lr = 5e-4
         if epoch >= 240:
-            lr = 1e-5
+            lr = 2e-6
+        if epoch >= 320:
+            lr = 5e-3
+        if epoch >= 400:
+            lr = 1e-4
+        if epoch >= 480:
+            lr = 1e-6
     for param_group in optimizer.param_groups:
         param_group['lr'] = lr
 
 
-for epoch in range(start_epoch, args.epochs, args.duplicate):
-    adjust_learning_rate(optimizer, epoch)
-    if args.train:
+if args.train:
+    for epoch in range(start_epoch, args.epochs, args.duplicate):
+        adjust_learning_rate(optimizer, epoch)
         train_loss, train_acc = train(epoch)
-    test_loss, test_acc = test(epoch)
+        test_loss, test_acc = test(epoch)
+else:
+    test_loss, test_acc = test(start_epoch)

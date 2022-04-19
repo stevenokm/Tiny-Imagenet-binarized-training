@@ -1,7 +1,7 @@
-EPOCHS=300
+EPOCHS=600
 export CUDA_VISIBLE_DEVICES=1,2,3
 python3 -O training_smaller.py \
- --batch-size 4096 \
+ --batch-size 2048 \
  --lr 0.02 \
  --epochs $EPOCHS \
  --seed 11111 \
@@ -10,7 +10,9 @@ python3 -O training_smaller.py \
  --optimizer Adam \
  --duplicate 3 \
  --train \
+ --resume \
  --sess tiny_imagenet_smaller
+
 #  python3 -O training_smaller.py \
 #  --batch-size 384 \
 #  --lr 5e-3 \
@@ -22,7 +24,7 @@ python3 -O training_smaller.py \
 #  --duplicate 10 \
 #  --train \
 #  --sess tiny_imagenet_smaller
-EPOCHS=$(($EPOCHS + 1))
+
 export CUDA_VISIBLE_DEVICES=3
 python3 -O training_smaller.py \
  --seed 11111 \
