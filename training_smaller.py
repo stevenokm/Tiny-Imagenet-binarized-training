@@ -37,10 +37,9 @@ from brevitas.nn import QuantConv2d, QuantIdentity, QuantLinear
 from brevitas.core.restrict_val import RestrictValueType
 from brevitas_examples.bnn_pynq.models.common import CommonWeightQuant, CommonActQuant
 from brevitas_examples.bnn_pynq.models.tensor_norm import TensorNorm
+from brevitas_examples.bnn_pynq.models.losses import SqrHingeLoss
 
 from utils import progress_bar
-
-from losses import SqrHingeLoss
 
 parser = argparse.ArgumentParser(
     description='PyTorch Complement Objective Training (COT)')
@@ -352,6 +351,8 @@ if args.resume:
     torch.set_rng_state(checkpoint['rng_state'])
 
 criterion = nn.CrossEntropyLoss()
+#criterion = SqrHingeLoss()
+
 optimizer = optim.SGD(net.parameters(),
                       lr=base_learning_rate,
                       momentum=0.9,
@@ -377,11 +378,22 @@ def train(epoch):
             inputs = inputs.to(device, non_blocking=True)
             targets = targets.to(device, non_blocking=True)
 
+        # for hingeloss only
+        if isinstance(criterion, SqrHingeLoss):
+            target = targets.unsqueeze(1)
+            target_onehot = torch.Tensor(target.size(0), num_label).to(device, non_blocking=True)
+            target_onehot.fill_(-1)
+            target_onehot.scatter_(1, target, 1)
+            target = target.squeeze()
+            target_var = target_onehot
+        else:
+            target_var = targets
+
         # Baseline Implementation
-        inputs, targets = Variable(inputs), Variable(targets)
+        inputs, target_var = Variable(inputs), Variable(target_var)
         optimizer.zero_grad(set_to_none=True)
         outputs = net(inputs)
-        loss = criterion(outputs, targets)
+        loss = criterion(outputs, target_var)
         p_loss = 0.0
         loss.backward()
         optimizer.step()
@@ -428,10 +440,21 @@ def test(epoch):
                 inputs = inputs.to(device, non_blocking=True)
                 targets = targets.to(device, non_blocking=True)
 
-            inputs, targets = Variable(inputs), Variable(targets)
+            # for hingeloss only
+            if isinstance(criterion, SqrHingeLoss):
+                target = targets.unsqueeze(1)
+                target_onehot = torch.Tensor(target.size(0), num_label).to(device, non_blocking=True)
+                target_onehot.fill_(-1)
+                target_onehot.scatter_(1, target, 1)
+                target = target.squeeze()
+                target_var = target_onehot
+            else:
+                target_var = targets
+
+            inputs, target_var = Variable(inputs), Variable(target_var)
 
             outputs = test_model(inputs)
-            loss = criterion(outputs, targets)
+            loss = criterion(outputs, target_var)
 
             test_loss += loss.item()
             _, predicted = torch.max(outputs.data, 1)
@@ -486,29 +509,31 @@ def adjust_learning_rate(optimizer, epoch):
     """decrease the learning rate at 100 and 150 epoch"""
     lr = base_learning_rate
     if args.optimizer == 'SGD':
-        if epoch >= 40:
-            lr = 1e-3
         if epoch >= 80:
-            lr = 5e-4
-        if epoch >= 100:
-            lr = 1e-4
-        if epoch >= 120:
-            lr = 5e-5
-        if epoch >= 140:
-            lr = 1e-5
+            lr *= 0.2
+        if epoch >= 160:
+            lr *= 0.2
+        if epoch >= 240:
+            lr *= 0.2
+        if epoch >= 320:
+            lr *= 0.2
+        if epoch >= 400:
+            lr *= 0.2
+        if epoch >= 480:
+            lr *= 0.2
     elif args.optimizer == 'Adam':
         if epoch >= 80:
-            lr = 1e-2
+            lr *= 0.2
         if epoch >= 160:
-            lr = 5e-4
+            lr *= 0.2
         if epoch >= 240:
-            lr = 2e-6
+            lr *= 0.2
         if epoch >= 320:
-            lr = 5e-3
+            lr *= 0.2
         if epoch >= 400:
-            lr = 1e-4
+            lr *= 0.2
         if epoch >= 480:
-            lr = 1e-6
+            lr *= 0.2
     for param_group in optimizer.param_groups:
         param_group['lr'] = lr
 
