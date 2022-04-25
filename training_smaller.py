@@ -140,9 +140,9 @@ if use_cuda:
 #### dataset import ####
 data_dir = '../tiny-imagenet-200'
 num_label = 200
-normalize = transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
+img_size = 64
+# normalize = transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
 transform_train = transforms.Compose([
-    transforms.RandomCrop(64, padding=4),
     transforms.RandomHorizontalFlip(),
     transforms.ToTensor(),
     # normalize,
@@ -173,6 +173,7 @@ test_loader = torch.utils.data.DataLoader(testset,
 # #### dataset import (CIFAR-10 ####
 # data_dir = './cifar'
 # num_label = 10
+# img_size = 32
 # # normalize = transforms.Normalize((0.4914, 0.4822, 0.4465),
 # #                                  (0.247, 0.243, 0.261))
 # transform_train = transforms.Compose([
@@ -205,10 +206,9 @@ test_loader = torch.utils.data.DataLoader(testset,
 #                                           num_workers=args.workers)
 
 #### CNV declaration ####
-# VGG-13 like 13 layers CNN
-CNV_OUT_CH_POOL = [(16, False), (16, True), (32, False), (32, True),
-                   (64, False), (64, True)]
-INTERMEDIATE_FC_FEATURES = [(1024, 1024), (1024, 512)]
+CNV_OUT_CH_POOL = [(24, False), (24, True), (48, False), (48, True),
+                   (96, False), (96, True)]
+INTERMEDIATE_FC_FEATURES = [(1536, 768), (768, 384)]
 LAST_FC_IN_FEATURES = INTERMEDIATE_FC_FEATURES[-1][1]
 LAST_FC_PER_OUT_CH_SCALING = False
 POOL_SIZE = 2
@@ -316,7 +316,7 @@ brevitas_op_count_hooks = {
     QuantIdentity: thop_basic_hooks.zero_ops,
     QuantLinear: thop_basic_hooks.count_linear
 }
-input_size = (1, 3, 64, 64)
+input_size = (1, 3, img_size, img_size)
 inputs = torch.rand(size=input_size, device=device)
 thop_model = copy.deepcopy(net)
 summary(thop_model, input_size=input_size)
@@ -370,6 +370,7 @@ def train(epoch):
     net.train()
     train_loss = 0
     correct = 0
+    correct_top5 = 0
     total = 0
     for batch_idx, data in enumerate(train_loader):
         (inputs, targets) = data
@@ -381,7 +382,9 @@ def train(epoch):
         # for hingeloss only
         if isinstance(criterion, SqrHingeLoss):
             target = targets.unsqueeze(1)
-            target_onehot = torch.Tensor(target.size(0), num_label).to(device, non_blocking=True)
+            target_onehot = torch.Tensor(target.size(0),
+                                         num_label).to(device,
+                                                       non_blocking=True)
             target_onehot.fill_(-1)
             target_onehot.scatter_(1, target, 1)
             target = target.squeeze()
@@ -403,11 +406,16 @@ def train(epoch):
         total += targets.size(0)
         correct += predicted.eq(targets.data).cpu().sum()
         correct = correct.item()
+        _, pred_top5 = torch.topk(outputs, 5, -1, True, True)
+        targets_top5 = targets.view(-1, 1)
+        correct_top5 += targets_top5.eq(pred_top5).cpu().sum()
+        correct_top5 = correct_top5.item()
 
         progress_bar(
-            batch_idx, len(train_loader), 'Loss: %.3f | Acc: %.3f%% (%d/%d)' %
-            (train_loss /
-             (batch_idx + 1), 100. * correct / total, correct, total))
+            batch_idx, len(train_loader),
+            'Loss: %.3f | Acc: %.3f%% (%d/%d) | Top5:  %.3f%% (%d/%d)' %
+            (train_loss / (batch_idx + 1), 100. * correct / total, correct,
+             total, 100. * correct_top5 / total, correct_top5, total))
 
     return (train_loss / batch_idx, 100. * correct / total)
 
@@ -418,6 +426,7 @@ def test(epoch):
     net.eval()
     test_loss = 0
     correct = 0
+    correct_top5 = 0
     total = 0
 
     test_model = copy.deepcopy(net)
@@ -443,7 +452,9 @@ def test(epoch):
             # for hingeloss only
             if isinstance(criterion, SqrHingeLoss):
                 target = targets.unsqueeze(1)
-                target_onehot = torch.Tensor(target.size(0), num_label).to(device, non_blocking=True)
+                target_onehot = torch.Tensor(target.size(0),
+                                             num_label).to(device,
+                                                           non_blocking=True)
                 target_onehot.fill_(-1)
                 target_onehot.scatter_(1, target, 1)
                 target = target.squeeze()
@@ -461,12 +472,16 @@ def test(epoch):
             total += targets.size(0)
             correct += predicted.eq(targets.data).cpu().sum()
             correct = correct.item()
+            _, pred_top5 = torch.topk(outputs, 5, -1, True, True)
+            targets_top5 = targets.view(-1, 1)
+            correct_top5 += targets_top5.eq(pred_top5).cpu().sum()
+            correct_top5 = correct_top5.item()
 
             progress_bar(
                 batch_idx, len(test_loader),
-                'Loss: %.3f | Acc: %.3f%% (%d/%d)' %
-                (test_loss /
-                 (batch_idx + 1), 100. * correct / total, correct, total))
+                'Loss: %.3f | Acc: %.3f%% (%d/%d) | Top5:  %.3f%% (%d/%d)' %
+                (test_loss / (batch_idx + 1), 100. * correct / total, correct,
+                 total, 100. * correct_top5 / total, correct_top5, total))
 
     del test_model
     torch.cuda.empty_cache()

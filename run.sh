@@ -10,7 +10,6 @@ python3 -O training_smaller.py \
  --optimizer Adam \
  --duplicate 3 \
  --train \
- --resume \
  --sess tiny_imagenet_smaller
 
 #  python3 -O training_smaller.py \
