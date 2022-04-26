@@ -1,5 +1,5 @@
 EPOCHS=600
-export CUDA_VISIBLE_DEVICES=1,2,3
+export CUDA_VISIBLE_DEVICES=2,3
 python3 -O training_smaller.py \
  --batch-size 2048 \
  --lr 0.02 \

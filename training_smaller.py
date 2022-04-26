@@ -206,9 +206,11 @@ test_loader = torch.utils.data.DataLoader(testset,
 #                                           num_workers=args.workers)
 
 #### CNV declaration ####
-CNV_OUT_CH_POOL = [(24, False), (24, True), (48, False), (48, True),
-                   (96, False), (96, True)]
-INTERMEDIATE_FC_FEATURES = [(1536, 768), (768, 384)]
+CNV_OUT_CH_POOL = [(16, False), (16, False), (16, True), (32, False),
+                   (32, False), (32, True), (64, False), (64, False),
+                   (64, True), (128, False), (128, False), (128, True),
+                   (256, False), (256, False), (256, True)]
+INTERMEDIATE_FC_FEATURES = [(1024, 512), (512, 256)]
 LAST_FC_IN_FEATURES = INTERMEDIATE_FC_FEATURES[-1][1]
 LAST_FC_PER_OUT_CH_SCALING = False
 POOL_SIZE = 2
@@ -244,6 +246,7 @@ class CNV(Module):
                             in_channels=in_ch,
                             out_channels=out_ch,
                             bias=False,
+                            padding=1,
                             weight_quant=CommonWeightQuant,
                             weight_bit_width=weight_bit_width))
             in_ch = out_ch
