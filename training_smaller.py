@@ -137,47 +137,12 @@ if use_cuda:
     batch_size *= n_gpu
     base_learning_rate *= n_gpu
 
-#### dataset import ####
-data_dir = '../tiny-imagenet-200'
-num_label = 200
-img_size = 64
-# normalize = transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
-transform_train = transforms.Compose([
-    transforms.RandomHorizontalFlip(),
-    transforms.ToTensor(),
-    # normalize,
-])
-transform_test = transforms.Compose([
-    transforms.ToTensor(),
-    # normalize,
-])
-trainset_once = datasets.ImageFolder(root=os.path.join(data_dir, 'train'),
-                                     transform=transform_train)
-trainset = trainset_once
-for i in range(args.duplicate - 1):
-    trainset = torch.utils.data.ConcatDataset([trainset, trainset_once])
-testset = datasets.ImageFolder(root=os.path.join(data_dir, 'val'),
-                               transform=transform_test)
-train_loader = torch.utils.data.DataLoader(trainset,
-                                           batch_size=batch_size,
-                                           shuffle=True,
-                                           pin_memory=True,
-                                           num_workers=args.workers,
-                                           prefetch_factor=args.duplicate * 2)
-test_loader = torch.utils.data.DataLoader(testset,
-                                          batch_size=test_batch_size,
-                                          shuffle=False,
-                                          pin_memory=True,
-                                          num_workers=args.workers)
-
-# #### dataset import (CIFAR-10 ####
-# data_dir = './cifar'
-# num_label = 10
-# img_size = 32
-# # normalize = transforms.Normalize((0.4914, 0.4822, 0.4465),
-# #                                  (0.247, 0.243, 0.261))
+# #### dataset import ####
+# data_dir = '../tiny-imagenet-200'
+# num_label = 200
+# img_size = 64
+# # normalize = transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
 # transform_train = transforms.Compose([
-#     transforms.RandomCrop(32, padding=4),
 #     transforms.RandomHorizontalFlip(),
 #     transforms.ToTensor(),
 #     # normalize,
@@ -186,31 +151,67 @@ test_loader = torch.utils.data.DataLoader(testset,
 #     transforms.ToTensor(),
 #     # normalize,
 # ])
-# trainset = datasets.CIFAR10(root=os.path.join(data_dir),
-#                             train=True,
-#                             transform=transform_train,
-#                             download=True)
-# testset = datasets.CIFAR10(root=os.path.join(data_dir),
-#                            train=False,
-#                            transform=transform_test,
-#                            download=True)
+# trainset_once = datasets.ImageFolder(root=os.path.join(data_dir, 'train'),
+#                                      transform=transform_train)
+# trainset = trainset_once
+# for i in range(args.duplicate - 1):
+#     trainset = torch.utils.data.ConcatDataset([trainset, trainset_once])
+# testset = datasets.ImageFolder(root=os.path.join(data_dir, 'val'),
+#                                transform=transform_test)
 # train_loader = torch.utils.data.DataLoader(trainset,
 #                                            batch_size=batch_size,
 #                                            shuffle=True,
 #                                            pin_memory=True,
-#                                            num_workers=args.workers)
+#                                            num_workers=args.workers,
+#                                            prefetch_factor=args.duplicate * 2)
 # test_loader = torch.utils.data.DataLoader(testset,
 #                                           batch_size=test_batch_size,
 #                                           shuffle=False,
 #                                           pin_memory=True,
 #                                           num_workers=args.workers)
 
+#### dataset import (CIFAR-10 ####
+data_dir = './cifar'
+num_label = 10
+img_size = 32
+# normalize = transforms.Normalize((0.4914, 0.4822, 0.4465),
+#                                  (0.247, 0.243, 0.261))
+transform_train = transforms.Compose([
+    transforms.RandomCrop(32, padding=4),
+    transforms.RandomHorizontalFlip(),
+    transforms.ToTensor(),
+    # normalize,
+])
+transform_test = transforms.Compose([
+    transforms.ToTensor(),
+    # normalize,
+])
+trainset_once = datasets.CIFAR10(root=os.path.join(data_dir),
+                                 train=True,
+                                 transform=transform_train,
+                                 download=True)
+trainset = trainset_once
+for i in range(args.duplicate - 1):
+    trainset = torch.utils.data.ConcatDataset([trainset, trainset_once])
+testset = datasets.CIFAR10(root=os.path.join(data_dir),
+                           train=False,
+                           transform=transform_test,
+                           download=True)
+train_loader = torch.utils.data.DataLoader(trainset,
+                                           batch_size=batch_size,
+                                           shuffle=True,
+                                           pin_memory=True,
+                                           num_workers=args.workers)
+test_loader = torch.utils.data.DataLoader(testset,
+                                          batch_size=test_batch_size,
+                                          shuffle=False,
+                                          pin_memory=True,
+                                          num_workers=args.workers)
+
 #### CNV declaration ####
-CNV_OUT_CH_POOL = [(16, False), (16, False), (16, True), (32, False),
-                   (32, False), (32, True), (64, False), (64, False),
-                   (64, True), (128, False), (128, False), (128, True),
-                   (256, False), (256, False), (256, True)]
-INTERMEDIATE_FC_FEATURES = [(1024, 512), (512, 256)]
+CNV_OUT_CH_POOL = [(64, False), (64, True), (128, False), (128, True),
+                   (256, False), (256, True), (512, False), (512, True)]
+INTERMEDIATE_FC_FEATURES = [(2048, 1024), (1024, 512)]
 LAST_FC_IN_FEATURES = INTERMEDIATE_FC_FEATURES[-1][1]
 LAST_FC_PER_OUT_CH_SCALING = False
 POOL_SIZE = 2
