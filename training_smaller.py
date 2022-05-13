@@ -33,7 +33,11 @@ from thop.vision import basic_hooks as thop_basic_hooks
 
 import brevitas.onnx as bo
 import brevitas.nn as qnn
-from brevitas.nn import QuantConv2d, QuantIdentity, QuantLinear
+# from brevitas.nn import QuantConv2d
+from wsconv import WSConv2d as QuantConv2d
+from brevitas.nn import QuantIdentity
+# from brevitas.nn import QuantLinear
+from wsconv import WSLinear as QuantLinear
 from brevitas.core.restrict_val import RestrictValueType
 from brevitas_examples.bnn_pynq.models.common import CommonWeightQuant, CommonActQuant
 from brevitas_examples.bnn_pynq.models.tensor_norm import TensorNorm
