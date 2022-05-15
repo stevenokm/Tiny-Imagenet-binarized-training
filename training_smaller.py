@@ -214,8 +214,8 @@ test_loader = torch.utils.data.DataLoader(testset,
 
 #### CNV declaration ####
 CNV_OUT_CH_POOL = [(64, False), (64, True), (128, False), (128, True),
-                   (256, False), (256, True), (512, False), (512, True)]
-INTERMEDIATE_FC_FEATURES = [(2048, 1024), (1024, 512)]
+                   (256, False), (256, True), (512, False), (512, False)]
+INTERMEDIATE_FC_FEATURES = [(2048 * 4, 1024), (1024, 512)]
 LAST_FC_IN_FEATURES = INTERMEDIATE_FC_FEATURES[-1][1]
 LAST_FC_PER_OUT_CH_SCALING = False
 POOL_SIZE = 2
