@@ -13,6 +13,8 @@ import torch
 import torchvision
 import torchvision.transforms as transforms
 import torchvision.datasets as datasets
+# from torchvision.datasets import CIFAR10
+from CIFARDataset import CIFAR10
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn import Module, ModuleList, BatchNorm2d, MaxPool2d, BatchNorm1d
@@ -58,6 +60,7 @@ parser.add_argument('--sess',
 parser.add_argument('--optimizer', default='Adam', type=str, help='optimizer')
 parser.add_argument('--mem_fault',
                     default='baseline',
+                    choices=['baseline', 'faulty', 'reparied_n', 'reparied_s'],
                     type=str,
                     help='mem fault pattern')
 parser.add_argument('--seed', default=11111, type=int, help='rng seed')
@@ -193,17 +196,19 @@ transform_test = transforms.Compose([
     transforms.ToTensor(),
     # normalize,
 ])
-trainset_once = datasets.CIFAR10(root=os.path.join(data_dir),
-                                 train=True,
-                                 transform=transform_train,
-                                 download=True)
+trainset_once = CIFAR10(root=os.path.join(data_dir),
+                        train=True,
+                        mem_fault=args.mem_fault,
+                        transform=transform_train,
+                        download=True)
 trainset = trainset_once
 for i in range(args.duplicate - 1):
     trainset = torch.utils.data.ConcatDataset([trainset, trainset_once])
-testset = datasets.CIFAR10(root=os.path.join(data_dir),
-                           train=False,
-                           transform=transform_test,
-                           download=True)
+testset = CIFAR10(root=os.path.join(data_dir),
+                  train=False,
+                  mem_fault=args.mem_fault,
+                  transform=transform_test,
+                  download=True)
 train_loader = torch.utils.data.DataLoader(trainset,
                                            batch_size=batch_size,
                                            shuffle=True,
@@ -228,6 +233,7 @@ KERNEL_SIZE = 3
 if True:
     QuantConv2d = WSConv2d
     QuantLinear = WSLinear
+
 
 class CNV(Module):
 
@@ -456,6 +462,17 @@ def test(epoch):
                 layer_quant_mean = torch.abs(torch.mean(layer.quant_weight()))
                 print(layer.__module__, layer_mean, layer_quant_mean,
                       layer_mean - layer_quant_mean)
+
+        if args.noise > 0.0:
+            for layer in test_model.modules():
+                if isinstance(layer, qnn.QuantConv2d) or isinstance(
+                        layer, qnn.QuantLinear):
+                    layer.weight += torch.normal(mean=0.0,
+                                                 std=(args.noise**2),
+                                                 size=layer.weight.size(),
+                                                 dtype=layer.weight.dtype,
+                                                 layout=layer.weight.layout,
+                                                 device=layer.weight.device)
 
         for batch_idx, data in enumerate(test_loader):
             (inputs, targets) = data
