@@ -33,11 +33,11 @@ from thop.vision import basic_hooks as thop_basic_hooks
 
 import brevitas.onnx as bo
 import brevitas.nn as qnn
-# from brevitas.nn import QuantConv2d
-from wsconv import WSConv2d as QuantConv2d
+from brevitas.nn import QuantConv2d
+from wsconv import WSConv2d
 from brevitas.nn import QuantIdentity
-# from brevitas.nn import QuantLinear
-from wsconv import WSLinear as QuantLinear
+from brevitas.nn import QuantLinear
+from wsconv import WSLinear
 from brevitas.core.restrict_val import RestrictValueType
 from brevitas_examples.bnn_pynq.models.common import CommonWeightQuant, CommonActQuant
 from brevitas_examples.bnn_pynq.models.tensor_norm import TensorNorm
@@ -117,6 +117,9 @@ parser.add_argument('--rtlsim',
 parser.add_argument('--fpga',
                     action='store_true',
                     help='perform model inference on pynq only deploy to fpga')
+parser.add_argument('--wsconv',
+                    action='store_true',
+                    help='use wsconv rather than QuantConv')
 
 args = parser.parse_args()
 
@@ -214,13 +217,17 @@ test_loader = torch.utils.data.DataLoader(testset,
 
 #### CNV declaration ####
 CNV_OUT_CH_POOL = [(64, False), (64, True), (128, False), (128, True),
-                   (256, False), (256, True), (512, False), (512, False)]
-INTERMEDIATE_FC_FEATURES = [(2048 * 4, 1024), (1024, 512)]
+                   (256, False), (256, False)]
+INTERMEDIATE_FC_FEATURES = [(2048 * 8, 1024), (1024, 512)]
 LAST_FC_IN_FEATURES = INTERMEDIATE_FC_FEATURES[-1][1]
 LAST_FC_PER_OUT_CH_SCALING = False
 POOL_SIZE = 2
 KERNEL_SIZE = 3
 
+# if args.wsconv:
+if True:
+    QuantConv2d = WSConv2d
+    QuantLinear = WSLinear
 
 class CNV(Module):
 
