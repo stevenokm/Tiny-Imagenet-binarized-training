@@ -1,69 +1,82 @@
-EPOCHS=600
-export CUDA_VISIBLE_DEVICES=2,3
+# EPOCHS=600
+# SESS=tiny_imagenet_smaller
+# SEED=11111
+
+# # tiny-imagenet Train
+# export CUDA_VISIBLE_DEVICES=2,3
 # python3 -O training_smaller.py \
 #  --batch-size 2048 \
 #  --lr 0.02 \
 #  --epochs $EPOCHS \
-#  --seed 11111 \
+#  --seed $SEED \
 #  --decay 0 \
 #  --workers 16 \
 #  --optimizer Adam \
 #  --duplicate 3 \
 #  --train \
-#  --sess tiny_imagenet_smaller
+#  --sess $SESS
 
-#  python3 -O training_smaller.py \
+# # tiny-imagenet Test
+# export CUDA_VISIBLE_DEVICES=0
+# python3 -O training_smaller.py \
 #  --batch-size 384 \
 #  --lr 5e-3 \
 #  --epochs 300 \
-#  --seed 11111 \
+#  --seed $SEED \
 #  --decay 0 \
 #  --workers 16 \
 #  --optimizer SGD \
 #  --duplicate 10 \
 #  --train \
-#  --sess tiny_imagenet_smaller
+#  --sess $SESS
 
-## CIFAR-10
+EPOCHS=600
+SESS=cifar10_smaller
+SEED=11111
+
+# # CIFAR-10 Train
+# export CUDA_VISIBLE_DEVICES=2,3
 # python3 -O training_smaller.py \
 #  --batch-size 2048 \
 #  --lr 0.02 \
 #  --epochs $EPOCHS \
-#  --seed 11111 \
+#  --seed $SEED \
 #  --decay 0 \
 #  --workers 16 \
 #  --optimizer Adam \
 #  --duplicate 10 \
 #  --train \
-#  --sess tiny_imagenet_smaller
+#  --sess $SESS
 
-export CUDA_VISIBLE_DEVICES=3
+# CIFAR-10 Test
+export CUDA_VISIBLE_DEVICES=0
 python3 -O training_smaller.py \
- --seed 11111 \
+ --seed $SEED \
  --workers 16 \
  --epochs $EPOCHS \
- --sess tiny_imagenet_smaller \
+ --sess $SESS \
  --mem_fault baseline \
  --resume
-# sub-project III
+
+# CIFAR-10 sub-project III
 python3 -O training_smaller.py \
- --seed 11111 \
+ --seed $SEED \
  --workers 16 \
  --epochs $EPOCHS \
- --sess tiny_imagenet_smaller \
+ --sess $SESS \
  --mem_fault faulty \
  --resume
 python3 -O training_smaller.py \
- --seed 11111 \
+ --seed $SEED \
  --workers 16 \
  --epochs $EPOCHS \
- --sess tiny_imagenet_smaller \
+ --sess $SESS \
  --mem_fault reparied_n \
  --resume
 python3 -O training_smaller.py \
- --seed 11111 \
+ --seed $SEED \
  --workers 16 \
  --epochs $EPOCHS \
- --sess tiny_imagenet_smaller \
+ --sess $SESS \
  --mem_fault reparied_s \
  --resume

@@ -22,3 +22,32 @@ python traing_smaller.py
 ```
 
 Which will finish the training process.
+
+
+## Sub-project 3 verification
+
+### Usage
+
+1. copy the checkpoint file to `./checkpoint` folder
+   - format: `ckpt.t7.<sess>_<seed>.pth`
+   - example: `ckpt.t7.tiny_imagenet_smaller_11111.pth`
+2. change the `SESS` and `SEED` in `run.sh`
+3. run `run.sh` with default `python3`
+   - if you want to inference only, comment `# CIFAR-10 Train` and `# tiny-imagenet Train` in `run.sh`
+
+### Change Faulty Bit
+
+1. change the `faulty_bit` at [line 138 in `CIFARDataset.py`](https://github.com/stevenokm/Tiny-Imagenet-binarized-training/blob/eef60de8a1a13704f959d3a205b8ea8fce82ef3a/CIFARDataset.py#L138)
+2. change the `neighbor_offset` at [line 140 in `CIFARDataset.py`](https://github.com/stevenokm/Tiny-Imagenet-binarized-training/blob/eef60de8a1a13704f959d3a205b8ea8fce82ef3a/CIFARDataset.py#L140)
+   - e.g. if the `faulty_bit` is 6 and want be fixed with bit 5, then change `neighbor_offset` to -1
+
+### Result @ CIFAR-10
+
+Checkpoint file: [ckpt.t7.cifar10_smaller_11111.pth](https://drive.google.com/file/d/17BNowbr6Ljx9_62C9qLp2Ts2vIH02xPh/view?usp=sharing)
+
+|             Status             | Accuracy (%) | Top 5 (%) |
+| :----------------------------: | :----------: | :-------: |
+|            Baseline            |    83.900    |  99.110   |
+|          Faulty (6th)          |    9.950     |  50.200   |
+| Repaired by neighbor bit (5th) |    20.730    |  68.530   |
+|     Repaired by MSB (7th)      |    36.720    |  83.150   |
