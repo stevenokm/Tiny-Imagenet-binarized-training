@@ -5,6 +5,7 @@ import numpy as np
 import pickle
 import torch
 from typing import Any, Callable, Optional, Tuple
+import random
 
 from torchvision.datasets.vision import VisionDataset
 from torchvision.datasets.utils import check_integrity, download_and_extract_archive
@@ -135,18 +136,25 @@ class CIFAR10(VisionDataset):
         a_max = (1 << msb + 1) - 1
         img_uint8 = (img * float(a_max)).to(torch.uint8)
 
-        faulty_bit = 7
+        faulty_bit = 5
         neighbor_offset = -1
         # generate faulty img (MSB: 7th bit; LSB: 0th bit; faulty bit: 6)
+        # faulty_mask = torch.full_like(img_uint8, 1 << faulty_bit)
         faulty_mask = torch.full_like(img_uint8, 1 << faulty_bit)
         repaired_mask = torch.bitwise_not(faulty_mask)
         img_uint8_repaired = torch.bitwise_and(img_uint8, repaired_mask)
-        if True:
-            # stuck-at-1
-            img_uint8_faulty = torch.bitwise_or(img_uint8_repaired, faulty_mask)
-        else:
-            # stuck-at-0
-            img_uint8_faulty = img_uint8_repaired
+
+        # random bit flip
+        faulty_value = torch.randint_like(img_uint8, low=0,
+                                          high=2) << faulty_bit
+        img_uint8_faulty = torch.bitwise_or(img_uint8_repaired, faulty_value)
+        # if True:
+        #     # stuck-at-1
+        #     img_uint8_faulty = torch.bitwise_or(img_uint8_repaired, faulty_mask)
+        # else:
+        #     # stuck-at-0
+        #     img_uint8_faulty = img_uint8_repaired
+
         # generate repaired img (repair the faulty bit with its neighbor bit: 5)
         neighbor_mask = torch.full_like(img_uint8, 1 <<
                                         (faulty_bit + neighbor_offset))

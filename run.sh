@@ -73,10 +73,10 @@ python3 -O training_smaller.py \
  --sess $SESS \
  --mem_fault reparied_n \
  --resume
-# python3 -O training_smaller.py \
-#  --seed $SEED \
-#  --workers 16 \
-#  --epochs $EPOCHS \
-#  --sess $SESS \
-#  --mem_fault reparied_s \
-#  --resume
+python3 -O training_smaller.py \
+ --seed $SEED \
+ --workers 16 \
+ --epochs $EPOCHS \
+ --sess $SESS \
+ --mem_fault reparied_s \
+ --resume
