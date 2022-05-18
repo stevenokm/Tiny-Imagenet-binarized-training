@@ -229,8 +229,7 @@ LAST_FC_PER_OUT_CH_SCALING = False
 POOL_SIZE = 2
 KERNEL_SIZE = 3
 
-# if args.wsconv:
-if True:
+if args.wsconv:
     QuantConv2d = WSConv2d
     QuantLinear = WSLinear
 
@@ -584,7 +583,7 @@ def adjust_learning_rate(optimizer, epoch):
     for param_group in optimizer.param_groups:
         param_group['lr'] = lr
 
-
+assert not (args.train and args.wsconv)
 if args.train:
     for epoch in range(start_epoch, args.epochs, args.duplicate):
         adjust_learning_rate(optimizer, epoch)

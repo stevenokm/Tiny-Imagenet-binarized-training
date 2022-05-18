@@ -135,14 +135,18 @@ class CIFAR10(VisionDataset):
         a_max = (1 << msb + 1) - 1
         img_uint8 = (img * float(a_max)).to(torch.uint8)
 
-        faulty_bit = 6
-        assert faulty_bit != msb
+        faulty_bit = 7
         neighbor_offset = -1
         # generate faulty img (MSB: 7th bit; LSB: 0th bit; faulty bit: 6)
         faulty_mask = torch.full_like(img_uint8, 1 << faulty_bit)
-        repaired_mask = torch.logical_not(faulty_mask)
+        repaired_mask = torch.bitwise_not(faulty_mask)
         img_uint8_repaired = torch.bitwise_and(img_uint8, repaired_mask)
-        img_uint8_faulty = torch.bitwise_or(img_uint8_repaired, faulty_mask)
+        if True:
+            # stuck-at-1
+            img_uint8_faulty = torch.bitwise_or(img_uint8_repaired, faulty_mask)
+        else:
+            # stuck-at-0
+            img_uint8_faulty = img_uint8_repaired
         # generate repaired img (repair the faulty bit with its neighbor bit: 5)
         neighbor_mask = torch.full_like(img_uint8, 1 <<
                                         (faulty_bit + neighbor_offset))

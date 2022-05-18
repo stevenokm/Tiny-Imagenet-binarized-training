@@ -45,9 +45,9 @@ Which will finish the training process.
 
 Checkpoint file: [ckpt.t7.cifar10_smaller_11111.pth](https://drive.google.com/file/d/17BNowbr6Ljx9_62C9qLp2Ts2vIH02xPh/view?usp=sharing)
 
-|             Status             | Accuracy (%) | Top 5 (%) |
+|         Status: S-a-1          | Accuracy (%) | Top 5 (%) |
 | :----------------------------: | :----------: | :-------: |
-|            Baseline            |    83.900    |  99.110   |
-|          Faulty (6th)          |    9.950     |  50.200   |
-| Repaired by neighbor bit (5th) |    20.730    |  68.530   |
-|     Repaired by MSB (7th)      |    36.720    |  83.150   |
+|            Baseline            |    84.150    |  99.110   |
+|          Faulty (7th)          |    33.570    |   78.600   |
+| Repaired by neighbor bit (6th) |    35.880    |  77.190   |
+|     Repaired by MSB (7th)      |    ~~84.150~~    |  ~~99.110~~   |

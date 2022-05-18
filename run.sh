@@ -35,7 +35,7 @@ SESS=cifar10_smaller
 SEED=11111
 
 # # CIFAR-10 Train
-# export CUDA_VISIBLE_DEVICES=2,3
+# export CUDA_VISIBLE_DEVICES=1,3
 # python3 -O training_smaller.py \
 #  --batch-size 2048 \
 #  --lr 0.02 \
@@ -49,7 +49,7 @@ SEED=11111
 #  --sess $SESS
 
 # CIFAR-10 Test
-export CUDA_VISIBLE_DEVICES=0
+export CUDA_VISIBLE_DEVICES=3
 python3 -O training_smaller.py \
  --seed $SEED \
  --workers 16 \
@@ -73,10 +73,10 @@ python3 -O training_smaller.py \
  --sess $SESS \
  --mem_fault reparied_n \
  --resume
-python3 -O training_smaller.py \
- --seed $SEED \
- --workers 16 \
- --epochs $EPOCHS \
- --sess $SESS \
- --mem_fault reparied_s \
- --resume
+# python3 -O training_smaller.py \
+#  --seed $SEED \
+#  --workers 16 \
+#  --epochs $EPOCHS \
+#  --sess $SESS \
+#  --mem_fault reparied_s \
+#  --resume
