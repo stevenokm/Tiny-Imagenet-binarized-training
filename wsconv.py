@@ -14,7 +14,6 @@ __all__ = ['NegBiasLayer', 'WSConv2d']
 
 
 class NegBiasLayer(Module):
-
     def __init__(self, *args, device=None, dtype=None, **kwargs) -> None:
         factory_kwargs = {'device': device, 'dtype': dtype}
         super(NegBiasLayer, self).__init__()
@@ -39,7 +38,6 @@ class NegBiasLayer(Module):
 
 
 class WSConv2d(QuantConv2d):
-
     def __init__(
             self,
             in_channels: int,
@@ -72,21 +70,22 @@ class WSConv2d(QuantConv2d):
                              output_quant=output_quant,
                              return_quant_tensor=return_quant_tensor,
                              **kwargs)
+        self.epsilon = 1e-8
 
     def forward(
             self, input: Union[Tensor,
                                QuantTensor]) -> Union[Tensor, QuantTensor]:
 
         layer_std, layer_mean = torch.std_mean(self.weight.data)
-        self.weight.data = self.weight.data - layer_mean
-        self.weight.data = self.weight.data / layer_std
-        self.weight.data = self.weight.data * torch.numel(
-            self.weight.data)**-.5
+        temp_weight = self.weight.data - layer_mean
+        # NOTE: add epsilon divisor avoid numerical issues
+        temp_weight = temp_weight / (layer_std + self.epsilon)
+        temp_weight = temp_weight * torch.numel(self.weight.data)**-.5
+        self.weight.data = temp_weight
         return self.forward_impl(input)
 
 
 class WSLinear(QuantLinear):
-
     def __init__(
             self,
             in_features: int,
@@ -108,14 +107,16 @@ class WSLinear(QuantLinear):
                              output_quant=output_quant,
                              return_quant_tensor=return_quant_tensor,
                              **kwargs)
+        self.epsilon = 1e-8
 
     def forward(
             self, input: Union[Tensor,
                                QuantTensor]) -> Union[Tensor, QuantTensor]:
 
         layer_std, layer_mean = torch.std_mean(self.weight.data)
-        self.weight.data = self.weight.data - layer_mean
-        self.weight.data = self.weight.data / layer_std
-        self.weight.data = self.weight.data * torch.numel(
-            self.weight.data)**-.5
+        temp_weight = self.weight.data - layer_mean
+        # NOTE: add epsilon divisor avoid numerical issues
+        temp_weight = temp_weight / (layer_std + self.epsilon)
+        temp_weight = temp_weight * torch.numel(self.weight.data)**-.5
+        self.weight.data = temp_weight
         return self.forward_impl(input)

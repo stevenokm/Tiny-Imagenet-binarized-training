@@ -30,12 +30,13 @@
 #  --train \
 #  --sess $SESS
 
-EPOCHS=600
+EPOCHS=500
 SESS=cifar10_smaller
 SEED=11111
+NOISE=1.0
 
 # # CIFAR-10 Train
-# export CUDA_VISIBLE_DEVICES=1,3
+# export CUDA_VISIBLE_DEVICES=0,1,2,3
 # python3 -O training_smaller.py \
 #  --batch-size 2048 \
 #  --lr 0.02 \
@@ -48,6 +49,61 @@ SEED=11111
 #  --train \
 #  --sess $SESS
 
+# # CIFAR-10 Test
+# export CUDA_VISIBLE_DEVICES=3
+# python3 -O training_smaller.py \
+#  --seed $SEED \
+#  --workers 16 \
+#  --epochs $EPOCHS \
+#  --sess $SESS \
+#  --mem_fault baseline \
+#  --noise $NOISE \
+#  --resume
+
+# # CIFAR-10 sub-project III
+# python3 -O training_smaller.py \
+#  --seed $SEED \
+#  --workers 16 \
+#  --epochs $EPOCHS \
+#  --sess $SESS \
+#  --mem_fault faulty \
+#  --resume
+# python3 -O training_smaller.py \
+#  --seed $SEED \
+#  --workers 16 \
+#  --epochs $EPOCHS \
+#  --sess $SESS \
+#  --mem_fault reparied_n \
+#  --resume
+# python3 -O training_smaller.py \
+#  --seed $SEED \
+#  --workers 16 \
+#  --epochs $EPOCHS \
+#  --sess $SESS \
+#  --mem_fault reparied_s \
+#  --resume
+
+# wsconv
+
+EPOCHS=600
+SESS=cifar10_smaller_wsconv
+SEED=11111
+
+# CIFAR-10 Train
+export CUDA_VISIBLE_DEVICES=0,1,2,3
+python3 -O training_smaller.py \
+ --batch-size 2048 \
+ --lr 0.02 \
+ --epochs $EPOCHS \
+ --seed $SEED \
+ --decay 0 \
+ --workers 16 \
+ --optimizer Adam \
+ --duplicate 10 \
+ --train \
+ --wsconv \
+ --sess $SESS
+
 # CIFAR-10 Test
 export CUDA_VISIBLE_DEVICES=3
 python3 -O training_smaller.py \
@@ -56,27 +112,32 @@ python3 -O training_smaller.py \
  --epochs $EPOCHS \
  --sess $SESS \
  --mem_fault baseline \
+ --noise $NOISE \
+ --wsconv \
  --resume
 
-# CIFAR-10 sub-project III
-python3 -O training_smaller.py \
- --seed $SEED \
- --workers 16 \
- --epochs $EPOCHS \
- --sess $SESS \
- --mem_fault faulty \
- --resume
-python3 -O training_smaller.py \
- --seed $SEED \
- --workers 16 \
- --epochs $EPOCHS \
- --sess $SESS \
- --mem_fault reparied_n \
- --resume
-python3 -O training_smaller.py \
- --seed $SEED \
- --workers 16 \
- --epochs $EPOCHS \
- --sess $SESS \
- --mem_fault reparied_s \
- --resume
+# # CIFAR-10 sub-project III
+# python3 -O training_smaller.py \
+#  --seed $SEED \
+#  --workers 16 \
+#  --epochs $EPOCHS \
+#  --sess $SESS \
+#  --mem_fault faulty \
+#  --wsconv \
+#  --resume
+# python3 -O training_smaller.py \
+#  --seed $SEED \
+#  --workers 16 \
+#  --epochs $EPOCHS \
+#  --sess $SESS \
+#  --mem_fault reparied_n \
+#  --wsconv \
+#  --resume
+# python3 -O training_smaller.py \
+#  --seed $SEED \
+#  --workers 16 \
+#  --epochs $EPOCHS \
+#  --sess $SESS \
+#  --mem_fault reparied_s \
+#  --wsconv \
+#  --resume

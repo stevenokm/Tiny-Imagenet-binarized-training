@@ -45,16 +45,33 @@ Which will finish the training process.
 
 Checkpoint file: [ckpt.t7.cifar10_smaller_11111.pth](https://drive.google.com/file/d/17BNowbr6Ljx9_62C9qLp2Ts2vIH02xPh/view?usp=sharing)
 
-|         Status: Rand           | Accuracy (%) |
+|          Status: Rand          | Accuracy (%) |
 | :----------------------------: | :----------: |
 |            Baseline            |    84.150    |
 |          Faulty (6th)          |    34.830    |
 | Repaired by neighbor bit (5th) |    52.230    |
 |     Repaired by MSB (7th)      |    60.100    |
 
-|         Status: Rand           | Accuracy (%) |
+|          Status: Rand          | Accuracy (%) |
 | :----------------------------: | :----------: |
 |            Baseline            |    84.150    |
 |          Faulty (5th)          |    66.630    |
 | Repaired by neighbor bit (4th) |    71.390    |
 |     Repaired by MSB (7th)      |    75.350    |
+
+## Sub-project 2 verification
+
+### Result @ CIFAR-10
+
+Checkpoint file: 
+- Baseline: [ckpt.t7.cifar10_smaller_11111.pth](https://drive.google.com/file/d/17BNowbr6Ljx9_62C9qLp2Ts2vIH02xPh/view?usp=sharing)
+- Weight Standardization (WS): [ckpt.t7.cifar10_smaller_wsconv_11111.pth]()
+
+| Noise \ Accuracy (%) | Baseline |   WS   |
+| :------------------: | :------: | :----: |
+|  $\sigma_{val} = 0$  |  84.150  | 52.350 |
+| $\sigma_{val} = 0.2$ |  80.270  | 51.370 |
+| $\sigma_{val} = 0.4$ |  77.270  | 47.940 |
+| $\sigma_{val} = 0.6$ |  69.420  | 42.620 |
+| $\sigma_{val} = 0.8$ |  52.830  | 36.390 |
+| $\sigma_{val} = 1.0$ |  23.700  | 26.650 |

@@ -231,11 +231,10 @@ KERNEL_SIZE = 3
 
 if args.wsconv:
     QuantConv2d = WSConv2d
-    QuantLinear = WSLinear
+    # QuantLinear = WSLinear
 
 
 class CNV(Module):
-
     def __init__(self,
                  input_channels=3,
                  num_classes=200,
@@ -267,7 +266,9 @@ class CNV(Module):
                             weight_quant=CommonWeightQuant,
                             weight_bit_width=weight_bit_width))
             in_ch = out_ch
-            self.conv_features.append(BatchNorm2d(in_ch, eps=1e-4))
+            if not args.wsconv:
+                self.conv_features.append(BatchNorm2d(in_ch, eps=1e-4))
+            # self.conv_features.append(BatchNorm2d(in_ch, eps=1e-4))
             self.conv_features.append(
                 QuantIdentity(act_quant=CommonActQuant,
                               bit_width=act_bit_width))
@@ -568,20 +569,41 @@ def adjust_learning_rate(optimizer, epoch):
         if epoch >= 480:
             lr *= 0.2
     elif args.optimizer == 'Adam':
-        if epoch >= 80:
-            lr *= 0.2
-        if epoch >= 160:
-            lr *= 0.2
-        if epoch >= 240:
-            lr *= 0.2
-        if epoch >= 320:
-            lr *= 0.2
-        if epoch >= 400:
-            lr *= 0.2
-        if epoch >= 480:
-            lr *= 0.2
+        if args.wsconv:
+            if epoch >= 60:
+                lr *= 0.5
+            if epoch >= 120:
+                lr *= 0.5
+            if epoch >= 180:
+                lr *= 0.5
+            if epoch >= 240:
+                lr *= 0.5
+            if epoch >= 300:
+                lr *= 0.5
+            if epoch >= 360:
+                lr *= 0.5
+            if epoch >= 420:
+                lr *= 0.5
+            if epoch >= 480:
+                lr *= 0.5
+            if epoch >= 540:
+                lr *= 0.5
+        else:
+            if epoch >= 80:
+                lr *= 0.2
+            if epoch >= 160:
+                lr *= 0.2
+            if epoch >= 240:
+                lr *= 0.2
+            if epoch >= 320:
+                lr *= 0.2
+            if epoch >= 400:
+                lr *= 0.2
+            if epoch >= 480:
+                lr *= 0.2
     for param_group in optimizer.param_groups:
         param_group['lr'] = lr
+
 
 assert not (args.train and args.wsconv)
 if args.train:
