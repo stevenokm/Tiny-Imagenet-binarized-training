@@ -231,7 +231,7 @@ KERNEL_SIZE = 3
 
 if args.wsconv:
     QuantConv2d = WSConv2d
-    # QuantLinear = WSLinear
+    QuantLinear = WSLinear
 
 
 class CNV(Module):
