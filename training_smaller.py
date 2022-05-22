@@ -235,6 +235,7 @@ if args.wsconv:
 
 
 class CNV(Module):
+
     def __init__(self,
                  input_channels=3,
                  num_classes=200,
@@ -268,6 +269,8 @@ class CNV(Module):
             in_ch = out_ch
             if not args.wsconv:
                 self.conv_features.append(BatchNorm2d(in_ch, eps=1e-4))
+            else:
+                self.conv_features.append(qnn.ScaleBias(in_ch, bias=True))
             # self.conv_features.append(BatchNorm2d(in_ch, eps=1e-4))
             self.conv_features.append(
                 QuantIdentity(act_quant=CommonActQuant,

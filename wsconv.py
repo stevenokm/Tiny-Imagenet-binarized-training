@@ -14,6 +14,7 @@ __all__ = ['NegBiasLayer', 'WSConv2d']
 
 
 class NegBiasLayer(Module):
+
     def __init__(self, *args, device=None, dtype=None, **kwargs) -> None:
         factory_kwargs = {'device': device, 'dtype': dtype}
         super(NegBiasLayer, self).__init__()
@@ -38,6 +39,7 @@ class NegBiasLayer(Module):
 
 
 class WSConv2d(QuantConv2d):
+
     def __init__(
             self,
             in_channels: int,
@@ -86,6 +88,7 @@ class WSConv2d(QuantConv2d):
 
 
 class WSLinear(QuantLinear):
+
     def __init__(
             self,
             in_features: int,
