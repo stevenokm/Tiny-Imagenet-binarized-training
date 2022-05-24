@@ -33,7 +33,7 @@
 EPOCHS=500
 SESS=cifar10_smaller
 SEED=11111
-NOISE=0.8
+NOISE=1.0
 
 # # CIFAR-10 Train
 # export CUDA_VISIBLE_DEVICES=0,1
@@ -49,16 +49,16 @@ NOISE=0.8
 #  --train \
 #  --sess $SESS
 
-# # CIFAR-10 Test
-# export CUDA_VISIBLE_DEVICES=1
-# python3 -O training_smaller.py \
-#  --seed $SEED \
-#  --workers 16 \
-#  --epochs $EPOCHS \
-#  --sess $SESS \
-#  --mem_fault baseline \
-#  --noise $NOISE \
-#  --resume
+# CIFAR-10 Test
+export CUDA_VISIBLE_DEVICES=1
+python3 -O training_smaller.py \
+ --seed $SEED \
+ --workers 16 \
+ --epochs $EPOCHS \
+ --sess $SESS \
+ --mem_fault baseline \
+ --noise $NOISE \
+ --resume
 
 # # CIFAR-10 sub-project III
 # python3 -O training_smaller.py \
@@ -89,21 +89,21 @@ EPOCHS=600
 SESS=cifar10_smaller_wsconv
 SEED=11111
 
-# CIFAR-10 Train
-export CUDA_VISIBLE_DEVICES=0,1
-python3 -O training_smaller.py \
- --batch-size 2048 \
- --lr 0.02 \
- --epochs $EPOCHS \
- --seed $SEED \
- --decay 0 \
- --workers 16 \
- --optimizer Adam \
- --duplicate 10 \
- --train \
- --noise $NOISE \
- --wsconv \
- --sess $SESS
+# # CIFAR-10 Train
+# export CUDA_VISIBLE_DEVICES=0,1
+# python3 -O training_smaller.py \
+#  --batch-size 2048 \
+#  --lr 0.02 \
+#  --epochs $EPOCHS \
+#  --seed $SEED \
+#  --decay 0 \
+#  --workers 16 \
+#  --optimizer Adam \
+#  --duplicate 10 \
+#  --train \
+#  --noise $NOISE \
+#  --wsconv \
+#  --sess $SESS
 
 # CIFAR-10 Test
 export CUDA_VISIBLE_DEVICES=1

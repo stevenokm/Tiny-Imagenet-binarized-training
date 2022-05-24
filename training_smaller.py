@@ -231,7 +231,7 @@ KERNEL_SIZE = 3
 
 if args.wsconv:
     QuantConv2d = WSConv2d
-    QuantLinear = WSLinear
+    # QuantLinear = WSLinear
 
 
 class CNV(Module):
@@ -267,11 +267,7 @@ class CNV(Module):
                             weight_quant=CommonWeightQuant,
                             weight_bit_width=weight_bit_width))
             in_ch = out_ch
-            if not args.wsconv:
-                self.conv_features.append(BatchNorm2d(in_ch, eps=1e-4))
-            else:
-                self.conv_features.append(qnn.ScaleBias(in_ch, bias=True))
-            # self.conv_features.append(BatchNorm2d(in_ch, eps=1e-4))
+            self.conv_features.append(BatchNorm2d(in_ch, eps=1e-4))
             self.conv_features.append(
                 QuantIdentity(act_quant=CommonActQuant,
                               bit_width=act_bit_width))
@@ -453,81 +449,86 @@ def test(epoch):
     correct_top5 = 0
     total = 0
 
-    test_model = copy.deepcopy(net)
+    # 10 times test average accuracy
+    # with different random noises
+    for _ in range(10):
 
-    with torch.no_grad():
+        test_model = copy.deepcopy(net)
 
-        print("#")
-        for layer in test_model.modules():
-            if isinstance(layer, qnn.QuantConv2d) or isinstance(
-                    layer, qnn.QuantLinear):
-                layer_mean = torch.abs(torch.mean(layer.weight))
-                layer_quant_mean = torch.abs(torch.mean(layer.quant_weight()))
-                print(layer.__module__, layer_mean, layer_quant_mean,
-                      layer_mean - layer_quant_mean)
-
-        if args.noise > 0.0:
+        with torch.no_grad():
+            print("#")
             for layer in test_model.modules():
                 if isinstance(layer, qnn.QuantConv2d) or isinstance(
                         layer, qnn.QuantLinear):
-                    layer.weight += torch.normal(mean=0.0,
-                                                 std=(args.noise**2),
-                                                 size=layer.weight.size(),
-                                                 dtype=layer.weight.dtype,
-                                                 layout=layer.weight.layout,
-                                                 device=layer.weight.device)
+                    layer_mean = torch.abs(torch.mean(layer.weight))
+                    layer_quant_mean = torch.abs(
+                        torch.mean(layer.quant_weight()))
+                    print(layer.__module__, layer_mean, layer_quant_mean,
+                          layer_mean - layer_quant_mean)
 
-        for batch_idx, data in enumerate(test_loader):
-            (inputs, targets) = data
+            if args.noise > 0.0:
+                for layer in test_model.modules():
+                    if isinstance(layer, qnn.QuantConv2d) or isinstance(
+                            layer, qnn.QuantLinear):
+                        layer.weight += torch.normal(
+                            mean=0.0,
+                            std=(args.noise**2),
+                            size=layer.weight.size(),
+                            dtype=layer.weight.dtype,
+                            layout=layer.weight.layout,
+                            device=layer.weight.device)
 
-            if use_cuda:
-                inputs = inputs.to(device, non_blocking=True)
-                targets = targets.to(device, non_blocking=True)
+            for batch_idx, data in enumerate(test_loader):
+                (inputs, targets) = data
 
-            # for hingeloss only
-            if isinstance(criterion, SqrHingeLoss):
-                target = targets.unsqueeze(1)
-                target_onehot = torch.Tensor(target.size(0),
-                                             num_label).to(device,
-                                                           non_blocking=True)
-                target_onehot.fill_(-1)
-                target_onehot.scatter_(1, target, 1)
-                target = target.squeeze()
-                target_var = target_onehot
-            else:
-                target_var = targets
+                if use_cuda:
+                    inputs = inputs.to(device, non_blocking=True)
+                    targets = targets.to(device, non_blocking=True)
 
-            inputs, target_var = Variable(inputs), Variable(target_var)
+                # for hingeloss only
+                if isinstance(criterion, SqrHingeLoss):
+                    target = targets.unsqueeze(1)
+                    target_onehot = torch.Tensor(target.size(0), num_label).to(
+                        device, non_blocking=True)
+                    target_onehot.fill_(-1)
+                    target_onehot.scatter_(1, target, 1)
+                    target = target.squeeze()
+                    target_var = target_onehot
+                else:
+                    target_var = targets
 
-            outputs = test_model(inputs)
-            loss = criterion(outputs, target_var)
+                inputs, target_var = Variable(inputs), Variable(target_var)
 
-            test_loss += loss.item()
-            _, predicted = torch.max(outputs.data, 1)
-            total += targets.size(0)
-            correct += predicted.eq(targets.data).cpu().sum()
-            correct = correct.item()
-            _, pred_top5 = torch.topk(outputs, 5, -1, True, True)
-            targets_top5 = targets.view(-1, 1)
-            correct_top5 += targets_top5.eq(pred_top5).cpu().sum()
-            correct_top5 = correct_top5.item()
+                outputs = test_model(inputs)
+                loss = criterion(outputs, target_var)
 
-            progress_bar(
-                batch_idx, len(test_loader),
-                'Loss: %.3f | Acc: %.3f%% (%d/%d) | Top5:  %.3f%% (%d/%d)' %
-                (test_loss / (batch_idx + 1), 100. * correct / total, correct,
-                 total, 100. * correct_top5 / total, correct_top5, total))
+                test_loss += loss.item()
+                _, predicted = torch.max(outputs.data, 1)
+                total += targets.size(0)
+                correct += predicted.eq(targets.data).cpu().sum()
+                correct_val = correct.item()
+                _, pred_top5 = torch.topk(outputs, 5, -1, True, True)
+                targets_top5 = targets.view(-1, 1)
+                correct_top5 += targets_top5.eq(pred_top5).cpu().sum()
+                correct_top5_val = correct_top5.item()
+
+                progress_bar(
+                    batch_idx, len(test_loader),
+                    'Loss: %.3f | Acc: %.3f%% (%d/%d) | Top5:  %.3f%% (%d/%d)'
+                    % (test_loss / (batch_idx + 1), 100. * correct_val / total,
+                       correct_val, total, 100. * correct_top5_val / total,
+                       correct_top5_val, total))
 
     del test_model
     torch.cuda.empty_cache()
 
     # Save checkpoint.
-    acc = 100. * correct / total
+    acc = 100. * correct_val / total
     if acc > best_acc:
         best_acc = acc
         if args.train:
             checkpoint(acc, epoch + args.duplicate - 1)
-    return (test_loss / batch_idx, 100. * correct / total)
+    return (test_loss / batch_idx, 100. * correct_val / total)
 
 
 def checkpoint(acc, epoch):
@@ -608,7 +609,6 @@ def adjust_learning_rate(optimizer, epoch):
         param_group['lr'] = lr
 
 
-assert not (args.train and args.wsconv)
 if args.train:
     for epoch in range(start_epoch, args.epochs, args.duplicate):
         adjust_learning_rate(optimizer, epoch)

@@ -67,11 +67,13 @@ Checkpoint file:
 - Baseline: [ckpt.t7.cifar10_smaller_11111.pth](https://drive.google.com/file/d/17BNowbr6Ljx9_62C9qLp2Ts2vIH02xPh/view?usp=sharing)
 - Weight Standardization (WS): [ckpt.t7.cifar10_smaller_wsconv_11111.pth]()
 
-| Noise \ Accuracy (%) | Baseline |   WS   |
+Note: 10 times average accuracy.
+
+| Noise \ Accuracy (%) | Baseline |  +WS   |
 | :------------------: | :------: | :----: |
-|  $\sigma_{val} = 0$  |  84.150  | 53.310 |
-| $\sigma_{val} = 0.2$ |  80.270  | 52.570 |
-| $\sigma_{val} = 0.4$ |  77.270  | 46.140 |
-| $\sigma_{val} = 0.6$ |  69.420  | 42.480 |
-| $\sigma_{val} = 0.8$ |  52.830  | 39.640 |
-| $\sigma_{val} = 1.0$ |  23.700  | 29.660 |
+|  $\sigma_{val} = 0$  |  84.150  | 83.520 |
+| $\sigma_{val} = 0.2$ |  80.567  | 80.700 |
+| $\sigma_{val} = 0.4$ |  76.594  | 76.888 |
+| $\sigma_{val} = 0.6$ |  68.495  | 68.857 |
+| $\sigma_{val} = 0.8$ |  47.551  | 49.249 |
+| $\sigma_{val} = 1.0$ |  18.243  | 25.752 |
