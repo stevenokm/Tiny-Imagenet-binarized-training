@@ -65,7 +65,7 @@ Checkpoint file: [ckpt.t7.cifar10_smaller_11111.pth](https://drive.google.com/fi
 
 Checkpoint file: 
 - Baseline: [ckpt.t7.cifar10_smaller_11111.pth](https://drive.google.com/file/d/17BNowbr6Ljx9_62C9qLp2Ts2vIH02xPh/view?usp=sharing)
-- Weight Standardization (WS): [ckpt.t7.cifar10_smaller_wsconv_11111.pth]()
+- Weight Standardization (WS): [ckpt.t7.cifar10_smaller_wsconv_11111.pth](https://drive.google.com/file/d/1zSmEu5tpRfBZIjEsyQQJI1InQMmnoQon/view?usp=sharing)
 
 Note: 10 times average accuracy.
 
