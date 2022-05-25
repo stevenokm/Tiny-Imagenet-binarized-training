@@ -49,15 +49,15 @@ class CIFAR10(VisionDataset):
         'md5': '5ff9c542aee3614f3951f8cda6e48888',
     }
 
-    def __init__(
-        self,
-        root: str,
-        mem_fault: str = "baseline",
-        train: bool = True,
-        transform: Optional[Callable] = None,
-        target_transform: Optional[Callable] = None,
-        download: bool = False,
-    ) -> None:
+    def __init__(self,
+                 root: str,
+                 mem_fault: str = "baseline",
+                 train: bool = True,
+                 transform: Optional[Callable] = None,
+                 target_transform: Optional[Callable] = None,
+                 download: bool = False,
+                 faulty_bit=5,
+                 neighbor_offset=-1) -> None:
 
         super(CIFAR10, self).__init__(root,
                                       transform=transform,
@@ -65,6 +65,12 @@ class CIFAR10(VisionDataset):
 
         self.train = train  # training set or test set
         self.mem_fault = mem_fault
+        self.faulty_bit = faulty_bit
+        self.neighbor_offset = neighbor_offset
+        self.msb = 7
+        assert (self.faulty_bit + self.neighbor_offset) <= self.msb and (
+            self.faulty_bit + self.neighbor_offset
+        ) >= 0, "faulty bit + neighbor offset must be in range [0, 7]"
 
         if download:
             self.download()
@@ -132,21 +138,18 @@ class CIFAR10(VisionDataset):
             target = self.target_transform(target)
 
         # max magnatude of uint8 (255)
-        msb = 7
-        a_max = (1 << msb + 1) - 1
+        a_max = (1 << self.msb + 1) - 1
         img_uint8 = (img * float(a_max)).to(torch.uint8)
 
-        faulty_bit = 5
-        neighbor_offset = -1
         # generate faulty img (MSB: 7th bit; LSB: 0th bit; faulty bit: 6)
-        # faulty_mask = torch.full_like(img_uint8, 1 << faulty_bit)
-        faulty_mask = torch.full_like(img_uint8, 1 << faulty_bit)
+        # faulty_mask = torch.full_like(img_uint8, 1 << self.faulty_bit)
+        faulty_mask = torch.full_like(img_uint8, 1 << self.faulty_bit)
         repaired_mask = torch.bitwise_not(faulty_mask)
         img_uint8_repaired = torch.bitwise_and(img_uint8, repaired_mask)
 
         # random bit flip
         faulty_value = torch.randint_like(img_uint8, low=0,
-                                          high=2) << faulty_bit
+                                          high=2) << self.faulty_bit
         img_uint8_faulty = torch.bitwise_or(img_uint8_repaired, faulty_value)
         # if True:
         #     # stuck-at-1
@@ -156,19 +159,19 @@ class CIFAR10(VisionDataset):
         #     img_uint8_faulty = img_uint8_repaired
 
         # generate repaired img (repair the faulty bit with its neighbor bit: 5)
-        neighbor_mask = torch.full_like(img_uint8, 1 <<
-                                        (faulty_bit + neighbor_offset))
+        neighbor_mask = torch.full_like(
+            img_uint8, 1 << (self.faulty_bit + self.neighbor_offset))
         img_uint8_neighbor = torch.bitwise_and(img_uint8, neighbor_mask)
-        if neighbor_offset > 0:
-            img_uint8_neighbor = img_uint8_neighbor >> neighbor_offset
+        if self.neighbor_offset > 0:
+            img_uint8_neighbor = img_uint8_neighbor >> self.neighbor_offset
         else:
-            img_uint8_neighbor = img_uint8_neighbor << -neighbor_offset
+            img_uint8_neighbor = img_uint8_neighbor << -self.neighbor_offset
         img_uint8_repaired_n = torch.bitwise_or(img_uint8_repaired,
                                                 img_uint8_neighbor)
         # generate repaired img (repair the faulty bit with its sign/MSB bit: 7)
-        sign_mask = torch.full_like(img_uint8, 1 << msb)
+        sign_mask = torch.full_like(img_uint8, 1 << self.msb)
         img_uint8_sign = torch.bitwise_and(img_uint8, sign_mask)
-        img_uint8_sign = img_uint8_sign >> (msb - faulty_bit)
+        img_uint8_sign = img_uint8_sign >> (self.msb - self.faulty_bit)
         img_uint8_repaired_s = torch.bitwise_or(img_uint8_repaired,
                                                 img_uint8_sign)
 

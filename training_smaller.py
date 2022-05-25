@@ -123,6 +123,16 @@ parser.add_argument('--fpga',
 parser.add_argument('--wsconv',
                     action='store_true',
                     help='use wsconv rather than QuantConv')
+parser.add_argument('--faulty_bit',
+                    default=5,
+                    type=int,
+                    help='faulty bit position',
+                    choices=[0, 1, 2, 3, 4, 5, 6, 7])
+parser.add_argument('--neighbor_offset',
+                    default=-1,
+                    type=int,
+                    help='neighbor offset',
+                    choices=[-6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6])
 
 args = parser.parse_args()
 
@@ -200,7 +210,9 @@ trainset_once = CIFAR10(root=os.path.join(data_dir),
                         train=True,
                         mem_fault=args.mem_fault,
                         transform=transform_train,
-                        download=True)
+                        download=True,
+                        faulty_bit=args.faulty_bit,
+                        neighbor_offset=args.neighbor_offset)
 trainset = trainset_once
 for i in range(args.duplicate - 1):
     trainset = torch.utils.data.ConcatDataset([trainset, trainset_once])
@@ -208,7 +220,9 @@ testset = CIFAR10(root=os.path.join(data_dir),
                   train=False,
                   mem_fault=args.mem_fault,
                   transform=transform_test,
-                  download=True)
+                  download=True,
+                  faulty_bit=args.faulty_bit,
+                  neighbor_offset=args.neighbor_offset)
 train_loader = torch.utils.data.DataLoader(trainset,
                                            batch_size=batch_size,
                                            shuffle=True,
@@ -616,3 +630,5 @@ if args.train:
         test_loss, test_acc = test(epoch)
 else:
     test_loss, test_acc = test(start_epoch)
+    print("args: ", args)
+    print('Avg. acc.: {:.3f}%'.format(test_acc))
