@@ -43,7 +43,7 @@ Which will finish the training process.
 
 ### Result @ CIFAR-10
 
-Checkpoint file: [ckpt.t7.cifar10_smaller_11111.pth](https://drive.google.com/file/d/17BNowbr6Ljx9_62C9qLp2Ts2vIH02xPh/view?usp=sharing)
+Checkpoint file: [ckpt.t7.cifar10_smaller_11111.pth](https://drive.google.com/file/d/1RGtKlKOJNcDb1EjX_JA5V_TMP96_R3Wh/view?usp=drive_link)
 
 |         Status: Rand           | Accuracy (%) |
 | :----------------------------: | :----------: |
